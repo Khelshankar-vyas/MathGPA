@@ -1,0 +1,500 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Math GPA - Gamified Practice and Assessment</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link href="gpastyle.css" media="all" rel="stylesheet">
+ <script type="text/javascript" src="qa_integration.js"></script>
+ <script type="text/javascript" src="jquery.js"></script>
+
+ <style>
+  /* Popup container - can be anything you want */
+
+  .popup {
+    position: sticky;
+    top: 50%;
+    left: 0%;
+    padding: 10px;
+    display: inline-block;
+    cursor: pointer;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    width: 100%;
+  }
+  
+  /* The actual popup */
+  .popup .popuptext {
+    visibility: hidden;
+    width: 80%;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 8px 0;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 10%;
+
+  }
+  
+  /* Popup arrow 
+  .popup .popuptext::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #555 transparent transparent transparent;
+  }
+  */
+  /* Toggle this class - hide and show the popup */
+  .popup .show {
+    visibility: visible;
+    -webkit-animation: fadeIn 1s;
+    animation: fadeIn 1s;
+  }
+  
+  /* Add animation (fade in the popup) */
+  @-webkit-keyframes fadeIn {
+    from {opacity: 0;} 
+    to {opacity: 1;}
+  }
+  
+  @keyframes fadeIn {
+    from {opacity: 0;}
+    to {opacity:1 ;}
+  }
+  </style>
+</head>
+<body>
+  <!-- Output will be displayed here -->
+  <div id="output_old"></div>
+  <div>
+    <div style="width: 100%;height: auto;background-color: #91C8E4;text-align: left; padding: '+cardPadding+'px;">
+      <p style="font-size:x-large;font-weight:bold">mathGPA(Gamified Practice and Assessment Tool)<sup>beta</sup></p>
+      <h3>Practice Function : <select id="operator"><option value="SUM">SUM</option><option value="MINUS">MINUS</option><option value="MULTIPLY">MULTIPLY</option><option value="DIVIDE">DIVIDE</option></select> </h3>
+      <h3>Practice Number Range : from <input type="number" id="firstNumber" value="1" min="0" max="100" step="1" placeholder="Start Number"> to <input type="number" id="secondNumber" value="5" min="5" max="150" step="1" placeholder="End Number"> </h3>
+	  <h3>Your Class : <input type="number" id="classNumber" value="1" min="-2" max="15" step="1" placeholder="Class Number"> | Your Role Number : <input type="number" id="rollNumber" value="1" min="1" max="150" step="1" placeholder="Roll Number"> <button onclick="createPractice();">Click here to reload new Practice set</button></h3>
+	  <p>Create unlimited practice sets for different grades by changing above parameters.<br></p>
+	  <p><i><b>Instructions:</b><br> - Please make sure that first number in the range should be lower than second number. Recommended upper limits are 100 and 150 for the range. ]<br> - For smooth and automatic navigation from one question to another, key-in the answer and just click enter. Green colour is for correct answer and orange is for wrong answer</i></p>
+    </div>
+  </div>
+
+  <hr>
+  <div class="popup" onclick="closeResult()">
+    <span class="popuptext" id="myPopup">A Simple Popup! this is the answer text to display<br><button id="closeButton" onsubmit="closeResult()">hello</button></span>
+  </div> 
+  <div id="output" class="row"></div>
+    
+
+  
+
+  <script>
+// Variables for storing user preferences and processed data
+//http://localhost/mathgpa/index.html?start=0&end=10&operation=SUM&randomize=YES&style=BIGANS&printOrPlay=PRINT&resultLimit=10
+    var startNumber;  
+    var endNumber;
+    var functionType;
+    var isRandomDisplay="YES";
+    var displayStyle = "BIGBOX";
+    var isNegativeAnswerAllowed = false; //not used yet but coded to avoid negative answer
+    var printOrPlay = "PRINT";
+    var displayIntro = "YES";
+    var displayResultCount = 10;
+	
+	var userClass;
+	var userRollNumber;
+
+//visual elements var
+var cardWidth = 227;
+var cardHeight = 333;
+var cardColor = "lightblue";
+var cardPadding = 16;
+
+//play tracking
+var correctAnsCount = 0;
+var wrontAnsCount = 0;
+
+    // Arrays to hold processed and final data
+    var processedArray = [];
+    var finalArrayBeforePrinting = [];
+
+var keyDownCount = 0;
+
+var popup = document.getElementById("myPopup");
+
+    // Step 0.1 - Check all URL variables and set them in the JavaScript variables
+    const urlParams = new URLSearchParams(window.location.search);
+    startNumber = parseInt(urlParams.get('start'));
+    endNumber = parseInt(urlParams.get('end'));
+    functionType = urlParams.get('operation');
+    isRandomDisplay = urlParams.get('randomize');
+    //displayStyle = urlParams.get('style');
+    //printOrPlay = urlParams.get('printOrPlay');
+    displayResultCount = urlParams.get('resultLimit');
+	displayIntro = urlParams.get('dIntro');
+    userClass = urlParams.get('class');
+	userRollNumber = urlParams.get('rollNumber');
+
+//visual elements var //rough test
+/*cardWidth = urlParams.get('cardWidth');
+if(cardWidth == "FULL"){
+cardWidth = "100%";
+cardHeight = "100%";
+}*/
+
+    // Step 0.2 - Validation to be implemented if proper values are not passed in the URL
+
+    // Step 1 - Get the processed answer Array
+    processedArray = getProcessedAnswerArray(startNumber, endNumber, functionType, isNegativeAnswerAllowed);
+
+    // Step 2 - Check if we need to do random display; if yes, randomize the array before display
+    finalArrayBeforePrinting = prepareFinalArrayBeforePrinting(Array.from(processedArray));
+
+    // Step 3 - Display on screen based on the option (Print or Play) and display result count
+    // Step 3.1 - If Print option is chosen
+    if(printOrPlay == "PRINT")
+      displayOnlyForView(finalArrayBeforePrinting, displayStyle, displayResultCount);
+    else
+      displayForPlay(finalArrayBeforePrinting, displayStyle, displayResultCount);
+
+    //change UI param is criteria is passed in URL
+      setParamsInDisplay(); 
+
+    function createPractice() {
+      getUserValues();
+      refreshPracticeSet(startNumber, endNumber, functionType, displayResultCount)
+    }
+      
+    function getUserValues() {
+      startNumber = parseInt(document.getElementById("firstNumber").value);
+      endNumber = parseInt(document.getElementById("secondNumber").value);
+	    userClass = parseInt(document.getElementById("classNumber").value);
+      userRollNumber = parseInt(document.getElementById("rollNumber").value);
+      functionType = document.getElementById("operator").value;
+      displayResultCount = 10;
+      displayIntro="YES";
+      isRandomDisplay = "YES";
+    }
+      
+    function refreshPracticeSet(startNumber, endNumber, functionType, displayResultCount) {
+      displayIntro="YES";
+      isRandomDisplay = "YES";
+      //step 1 - get values of all compinations and results
+      processedArray = getProcessedAnswerArray(startNumber, endNumber, functionType, isNegativeAnswerAllowed);
+
+      // Step 2 - Check if we need to do random display; if yes, randomize the array before display
+      finalArrayBeforePrinting = prepareFinalArrayBeforePrinting(Array.from(processedArray));
+
+      // Step 3 - Display on screen based on the option (Print or Play) and display result count
+      // Step 3.1 - If Print option is chosen
+      if(printOrPlay == "PRINT")
+        displayOnlyForView(finalArrayBeforePrinting, displayStyle, displayResultCount);
+      else
+        displayForPlay(finalArrayBeforePrinting, displayStyle, displayResultCount); 
+		
+	  setFreshQuizObj();
+
+    }
+
+    // This function will simply take start and end numbers and based on the function,
+    // it will get the result and each number will be saved as an array (e.g., 4,6,10 or ???).
+    // Inputs: startNumber, endNumber, functionType, isNegativeAnswerAllowed
+    // Output: processedArray
+    function getProcessedAnswerArray(startNumber, endNumber, functionType, isNegativeAnswerAllowed) {
+      var tempArray = [];
+      var unitString;
+
+      for (let i = startNumber; i <= endNumber; i++) {
+        for (let j = startNumber; j <= endNumber; j++) {
+          if (functionType == "SUM") {
+            var sum = i + j;
+            unitString = i + "," + j + "," + sum + ",+";
+            tempArray.push(unitString);
+          }
+          else if (functionType == "MINUS" && i>=j) {
+            var diff = i - j;
+            unitString = i + "," + j + "," + diff + ",-";
+            tempArray.push(unitString);
+          }
+          else if (functionType == "MULTIPLY") {
+            var prod = i * j;
+            unitString = i + "," + j + "," + prod + ",x";
+            tempArray.push(unitString);
+          }
+          else if (functionType == "DIVIDE") {
+            var multiple = i * j;
+            var divideBy = i;
+            var divideAns = j
+            unitString = multiple + "," + divideBy + "," + divideAns + ",&divide;";
+            tempArray.push(unitString);
+          }
+        }
+      }
+      return tempArray;
+    }
+
+    // TBD method description based on criteria to randomize
+    // This function prepares the final array before printing, taking into consideration the randomization criteria.
+    // Inputs: rawArray - the processed array
+    // Output: A final array after possible randomization
+    function prepareFinalArrayBeforePrinting(rawArray) {
+      var tempArray = [];
+      tempArray = rawArray;
+
+      if (isRandomDisplay == "YES") {
+        return shuffleArrayMembers(tempArray);
+      }
+      else {
+        return tempArray;
+      }
+    }
+
+    // Method documentation TBD
+    // This function displays the output for view-only purposes based on different styles.
+    // Inputs: arrayToPrint - the final array to display, Style - the display style, displayResultCount - number of results to display
+    function displayOnlyForView(arrayToPrint, Style, displayResultCount) {
+      // Let's set default values
+      var fontKaSize = 30;
+      var ansDisplay = true;
+
+      // Set values based on the style chosen
+      if (Style == "SMALLANS") {
+        var fontKaSize = 10;
+        var ansDisplay = true;
+      }
+      else if (Style == "SMALLBOX") {
+        var fontKaSize = 10;
+        var ansDisplay = false;
+      }
+      else if (Style == "BIGANS") {
+        var fontKaSize = 30;
+        var ansDisplay = true;
+      }
+      else if (Style == "BIGBOX") {
+        var fontKaSize = 30;
+        var ansDisplay = false;
+      }
+
+      var text2print = "";
+      var displayLimit = arrayToPrint.length;
+
+      // Set the limit for the number of results to display
+      if (parseInt(displayResultCount) >= 1 && parseInt(displayResultCount) < arrayToPrint.length)
+        displayLimit = parseInt(displayResultCount);
+        console.log("testing - "+functionType);
+
+      if(displayIntro == "YES") {
+        text2print += '<div><div style="width: 100%;height: auto;background-color: #91C8E4;text-align: left; padding: '+cardPadding+'px;"<h2>[ Practice Function : <b>'+functionType+'</b> ] [ Number Range : from <b>'+startNumber+'</b> to <b>'+endNumber+'</b> ] </h2></div></div><hr>';
+
+      }
+
+      for (let index = 0; index < displayLimit; index++) {
+        var element = arrayToPrint[index];
+		
+        var elementArray = element.split(",");
+        var ansString = elementArray[2];
+
+        // If ansDisplay is set to false, display underscores instead of the actual answer
+        if (ansDisplay == false)
+          ansString = "___";
+
+        // Build the text to print based on the chosen style
+        //text2print v1
+
+        //text2print v4 horizontal
+        text2print += '<div class="column" id="div'+index+'" draggable="true" ondragstart="drag(event)"><div style="width: '+cardHeight+'px;height: '+cardWidth+'px;background-color: '+cardColor+';text-align: center; padding: '+cardPadding+'px;"><table style="margin-left:auto;margin-right: auto; align-content: center;width:90%;max-width: 600px;"><tr style="font-size:64px;"><td>'+elementArray[0]+'</td><td>'+elementArray[3]+'</td><td>'+elementArray[1]+'</td></tr><tr><td colspan="3"><input id="'+index+'" type="number" onfocus="gpaCheck('+elementArray[2]+',this);" onclick="gpaCheck('+elementArray[2]+',this);" placeholder="" style="width: 100%;height:40%;border: 1px solid black;font-size:100px; text-align:center;"></td></tr></table></div></div>';
+      }
+
+      // Display the output on the screen
+      document.getElementById("output").innerHTML = "";
+      document.getElementById("output").innerHTML = text2print;
+    }
+
+    // TBD method description
+    // This function displays the output for play purposes.
+    // Inputs: finalArrayBeforePrinting - the final array to display, displayStyle - the display style, displayResultCount - number of results to display
+    function displayForPlay(finalArrayBeforePrinting, displayStyle, displayResultCount) {
+      console.log("TBD for Play");
+    }
+
+//------------------------play computation functions---------------------
+function gpaCheck(ansValue,el) {
+	//var gpaCheck = document.getElementById("ansText");
+	console.log("in here");
+	el.addEventListener("keydown", function (e) {
+		console.log("key event - "+e.code);
+		if (e.code === "Enter") {  //checks whether the pressed key is "Enter"
+		keyDownCount++;
+		validateAnswer(ansValue, e);
+		var element = e.target;
+		autoTab(e.target.id);
+		}
+	});
+}
+
+//not in use for 
+function gpaCheckFocusOut(ansValue,el) {
+	//var gpaCheck = document.getElementById("ansText");
+	console.log("in here 2 - "+el);
+	el.addEventListener("focusout", function (e) {
+		//if (e.code === "Enter") {  //checks whether the pressed key is "Enter"
+		console.log("key event - "+e.code);
+		//keyDownCount++;
+		validateAnswer(ansValue, e);
+		var element = e.target;
+		autoTab(e.target.id);
+		//}
+	});
+}	
+//working
+function validateAnswer(ansValue, ela) { //working
+//var element = e.target;
+	var userAns = ela.target.value;
+	var elementId = ela.target.id;
+	console.log("got - " + elementId );
+	var isAnswerCorrect = (parseFloat(ansValue) == parseFloat(userAns)) ? true : false;
+					//var isAnswerCorrect = isCorrect(ansValue, userAns);
+	document.getElementById(elementId).disabled = true;
+	document.getElementById(elementId).readonly = true;
+	
+	if(isAnswerCorrect == true) {
+		document.getElementById(elementId).style.backgroundColor = "lightgreen";
+		myQuizObj.NoOfCorrectAnswers++;
+	}
+	else {
+		document.getElementById(elementId).style.backgroundColor = "orange";
+	}
+	//quiz obj setting
+	var rOwValue = isAnswerCorrect ? "R" : "W";
+	var qNumber = parseInt(elementId);
+	//con
+	myQuizObj.rightOrWrong = updateQuizProgressString(myQuizObj.rightOrWrong, 10, parseInt(elementId)+1,rOwValue);
+	
+}
+function padTo2Digits(num) {
+  return num.toString().padStart(2, '0');
+}
+
+function formatDate(date) {
+  return (
+    [
+      date.getFullYear(),
+      padTo2Digits(date.getMonth() + 1),
+      padTo2Digits(date.getDate()),
+    ].join('-') +
+    ' ' +
+    [
+      padTo2Digits(date.getHours()),
+      padTo2Digits(date.getMinutes()),
+      padTo2Digits(date.getSeconds()),
+    ].join(':')
+  );
+}
+
+//2023-01-04 10:00:07
+//console.log(formatDate(new Date()));
+//working ...this is to automatically tab to next input element
+function autoTab(tuktuk) { //working
+	var quizSize;
+	quizSize = ((finalArrayBeforePrinting.length <10) ? finalArrayBeforePrinting.length : 10);
+	
+	if(parseInt(tuktuk) < (quizSize-1)) {
+		//var nextInputId = tuktuk.substring(0, 7)+(parseInt(tuktuk.substring(7))+1);
+		var nextInputId = parseInt(tuktuk)+1;
+		var nextElem = document.getElementById(nextInputId);
+		//console.log("what is - "+nextInputId);
+		nextElem.focus(); //working
+	}
+	else { 
+		myQuizObj.endTime = new Date();
+        myQuizObj.duration = timeDiff(myQuizObj.startTime, myQuizObj.endTime);
+        var quizDuration = myQuizObj.duration;
+		var TAG_QUIZ_COMPLETE = "complete";
+		var gpaCriteria = startNumber+"_"+endNumber+"_"+functionType;
+		var gpaUserId = userClass+"_"+userRollNumber;
+		var correctAnsCount=0;
+		correctAnsCount = ((myQuizObj.rightOrWrong.indexOf("R") != -1) ? myQuizObj.rightOrWrong.match(/R/g).length : 0);
+		
+		console.log(gpaCriteria+" - "+gpaUserId);
+		var urlll = "updateGPAStats.php?responseString=MATHGPA2&rightOrWrongString="+myQuizObj.rightOrWrong+"&timePerQuestionString=MATHGPA3&quizId=1000008&correctAnswers="+correctAnsCount+"&quizStatus="+TAG_QUIZ_COMPLETE+"&userId="+gpaUserId+"&sTime="+formatDate(myQuizObj.startTime)+"&eTime="+formatDate(myQuizObj.endTime)+"&quizDuration="+quizDuration+"&gpaCriteria="+gpaCriteria+"&quizSize="+quizSize;
+		
+		console.log(urlll);
+		$.ajax({
+      url:urlll ,async:false,success:function(result){
+        if(result=="Inserted"){
+          //alert("You Got "+correctAnsCount+" Correct Answers out of "+quizSize+" Questions.");
+          console.log("Record Submitted");
+        }
+      },error:function(result) {console.log("Error in Submitting");} 
+    });
+		
+		//alert("You Got "+correctAnsCount+" Correct Answers out of "+quizSize+" Questions.");
+    //showResult();
+    showResult(correctAnsCount,quizSize)
+
+	}
+    return false;
+}
+
+function showResult(correctAnsCount,quizSize) {
+  //var popup = document.getElementById("myPopup");
+  var btnText = '<br><br><button id="closeButton" onsubmit="closeResult()"> Close </button>';
+  popup.innerHTML = "You Got "+correctAnsCount+" Correct Answers out of "+quizSize+" Questions."+btnText;
+  popup.classList.toggle("show");
+  //document.getElementById("closeButton").focus();
+}
+
+function closeResult() {
+  //var popup = document.getElementById("myPopup");
+  popup.classList.toggle("show");
+}
+    //-------------------------common functions---------------------------------
+    // Method to randomly shuffle array elements
+    // Inputs: arrayToShuffle - the array to be shuffled
+    // Output: The shuffled array
+    function shuffleArrayMembers(arrayToShuffle) {
+      let currentIndex = arrayToShuffle.length,  randomIndex;
+
+      // While there remain elements to shuffle.
+      while (currentIndex != 0) {
+        // Pick a remaining element.
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex--;
+
+        // And swap it with the current element.
+        [arrayToShuffle[currentIndex], arrayToShuffle[randomIndex]] = [arrayToShuffle[randomIndex], arrayToShuffle[currentIndex]];
+      }
+      return arrayToShuffle;
+    }
+
+    function setParamsInDisplay() {    
+      let selectElement = document.getElementById("operator");
+      let startNumberElement = document.getElementById("firstNumber");
+      let endNumberElement = document.getElementById("secondNumber");
+      let classNumberElement = document.getElementById("classNumber");
+      let rollNumberElement = document.getElementById("rollNumber");
+	  
+	  if(functionType != null) {
+		  selectElement.value = functionType;
+		  startNumberElement.value = startNumber;
+		  endNumberElement.value = endNumber;
+		  classNumberElement.value = userClass;
+		  rollNumberElement.value = userRollNumber;
+	  }
+    }
+	
+	function timeDiff(startTime, endTime) {
+		var diff = endTime.getTime() - startTime.getTime();
+		return Math.floor(diff / 1000); //it will return difference in seconds
+	}
+  </script>
+
+</body>
+</html>

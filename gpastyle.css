@@ -1,0 +1,85 @@
+    /* CSS style for the result box */
+    .box {
+      display: inline-block;
+      width: 40px;
+      height: 15px;
+      text-align: center;
+      border: 1px solid black;
+      margin: 5px;
+      padding: 5px;
+    }
+	
+	/* Float four columns side by side */
+.column {
+  float: left;
+
+  padding: 1px 1px;
+}
+
+/* Remove extra left and right margins, due to padding */
+.row {margin: 0 0px;}
+
+/* Clear floats after the columns */
+.row:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Responsive columns */
+@media screen and (max-width: 600px) {
+  .column {
+    width: 100%;
+    display: block;
+    margin-bottom: 20px;
+  }
+}
+
+input {
+  width: 60px;
+  padding: 5px 5px;
+  margin: 8px 0;
+  box-sizing: border-box;
+  border: 2px solid darkgray;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+select {
+  width: 150px;
+  padding: 5px 5px;
+  margin: 8px 0;
+  box-sizing: border-box;
+  border: 2px solid darkgray;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+button {
+  border: none;
+  color: white;
+  padding: 10px 10px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  cursor: pointer;
+  border-radius: 4px;
+  background-color: #4CAF50;
+}
+
+button:hover {
+  background-color: green;
+  color: white;
+}
+
+h3 {
+    display: block;
+    font-size: 1.17em;
+    margin-block-start: 0em;
+    margin-block-end: 0em;
+    margin-inline-start: 0px;
+    margin-inline-end: 0px;
+    font-weight: bold;
+}
